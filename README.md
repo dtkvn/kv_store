@@ -12,63 +12,45 @@ A simple and efficient key-value store implemented as a fish shell function, usi
 
 ## Installation
 
-### Install using Fisher
-
-```bash
+```shell
 fisher install dtkvn/kv_store
-```
-
-### Install manually using Fisher
-
-```bash
-git clone https://github.com/dtkvn/kv_store.git
-cd kv_store
-fisher install .
-```
-
-### Install manually using Git
-
-```bash
-git clone https://github.com/dtkvn/kv_store.git
-cp -r kv_store/functions/kv.fish ~/.config/fish/functions/
-cp -r kv_store/completions/kv.fish ~/.config/fish/completions/
 ```
 
 ## Usage
 
 ### Set a key-value pair
 
-```bash
+```fish
 kv set <key> <value>
 ```
 
 ### Get a value by key
 
-```bash
+```fish
 kv get <key>
 ```
 
 ### List all key-value pairs
 
-```bash
+```fish
 kv list
 ```
 
 ### Delete a key-value pair
 
-```bash
+```fish
 kv delete <key>
 ```
 
 ### Show help
 
-```bash
+```fish
 kv --help
 ```
 
 ### Show version
 
-```bash
+```fish
 kv --version
 ```
 
@@ -76,21 +58,21 @@ kv --version
 
 Store and retrieve a simple value:
 
-```bash
+```fish
 kv set username john_doe
 kv get username  # Outputs: john_doe
 ```
 
 Store a value with spaces and special characters:
 
-```bash
+```fish
 kv set "full name" "John O'Connor"
 kv get "full name"  # Outputs: John O'Connor
 ```
 
 List all stored values:
 
-```bash
+```fish
 kv list
 # Outputs:
 # full name=John O'Connor
