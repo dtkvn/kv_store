@@ -38,7 +38,7 @@ function __kv_show_help
     echo
     echo "Options:"
     echo "  -h, --help     Show this help message and exit"
-    echo "  -v, --version  Show version information and exit"
+    # echo "  -v, --version  Show version information and exit"
     echo
     echo "Commands:"
     echo "  set KEY VALUE   Set a key-value pair"
@@ -47,10 +47,10 @@ function __kv_show_help
     echo "  delete KEY      Delete a key-value pair"
 end
 
-function __kv_show_version
-    echo "kv - fish key-value store with SQLite backend"
-    echo "Version 2.1.0"
-end
+# function __kv_show_version
+#     echo "kv - fish key-value store with SQLite backend"
+#     echo "Version 2.1.0"
+# end
 
 # Get a lock file path
 function __kv_lock_file
@@ -100,20 +100,20 @@ function __kv_release_lock
 end
 
 function kv
-    set -l options h/help v/version
+    set -l options h/help
     argparse -n kv $options -- $argv
     or return 1
 
-    # Handle help and version flags
+    # Handle help flag
     if set -q _flag_help
         __kv_show_help
         return 0
     end
 
-    if set -q _flag_version
-        __kv_show_version
-        return 0
-    end
+    # if set -q _flag_version
+    #     __kv_show_version
+    #     return 0
+    # end
 
     # Initialize the database if it doesn't exist
     __kv_init_db
