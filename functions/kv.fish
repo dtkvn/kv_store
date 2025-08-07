@@ -45,7 +45,54 @@ end
 
 function __kv_show_version
     echo "kv - fish key-value store with SQLite backend"
-    echo "Version 2.0.0"
+    echo "Version 2.1.0"
+end
+
+# Get a lock file path
+function __kv_lock_file
+    echo (__kv_db_file).lock
+end
+
+# Acquire a lock with timeout (in seconds)
+function __kv_acquire_lock
+    set -l lock_file (__kv_lock_file)
+    set -l timeout
+    if set -q argv[1]
+        set timeout $argv[1]
+    else
+        set timeout 5 # Default 5 seconds timeout
+    end
+    set -l start_time (date +%s)
+
+    while true
+        # Try to create the lock file atomically
+        if command mkdir "$lock_file" 2>/dev/null
+            # Set up trap to ensure lock is released on script exit
+            function __kv_release_lock_on_exit --on-process %self
+                __kv_release_lock
+            end
+            return 0
+        end
+
+        # Check if we've timed out
+        set -l current_time (date +%s)
+        if test (math "$current_time - $start_time") -ge $timeout
+            echo "Error: Could not acquire lock after $timeout seconds" >&2
+            return 1
+        end
+
+        # Wait a bit before retrying
+        sleep 0.1
+    end
+end
+
+# Release the lock
+function __kv_release_lock
+    set -l lock_file (__kv_lock_file)
+    if test -d "$lock_file"
+        command rmdir "$lock_file" 2>/dev/null
+    end
+    functions -e __kv_release_lock_on_exit 2>/dev/null
 end
 
 function kv
@@ -67,6 +114,11 @@ function kv
     # Initialize the database if it doesn't exist
     __kv_init_db
 
+    # Acquire lock before performing operations
+    if not __kv_acquire_lock
+        return 1
+    end
+
     # Get subcommand
     set -l cmd (string lower -- $argv[1] 2>/dev/null)
     set -e argv[1]
@@ -75,6 +127,7 @@ function kv
         case set
             if test (count $argv) -ne 2
                 echo "Error: 'set' requires exactly 2 arguments (key and value)" >&2
+                __kv_release_lock
                 return 1
             end
             set -l key (__kv_escape_sql "$argv[1]")
@@ -84,6 +137,7 @@ function kv
         case get
             if test (count $argv) -ne 1
                 echo "Error: 'get' requires exactly 1 argument (key)" >&2
+                __kv_release_lock
                 return 1
             end
             set -l key (__kv_escape_sql "$argv[1]")
@@ -100,6 +154,7 @@ function kv
         case delete
             if test (count $argv) -ne 1
                 echo "Error: 'delete' requires exactly 1 argument (key)" >&2
+                __kv_release_lock
                 return 1
             end
             set -l key (__kv_escape_sql "$argv[1]")
@@ -107,11 +162,16 @@ function kv
 
         case ''
             __kv_show_help
+            __kv_release_lock
             return 1
 
         case '*'
             echo "Error: Unknown command '$cmd'" >&2
             __kv_show_help
+            __kv_release_lock
             return 1
     end
+
+    # Release lock after performing operations
+    __kv_release_lock
 end
