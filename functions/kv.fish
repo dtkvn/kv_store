@@ -1,5 +1,4 @@
 # Define the data file path for the key-value store.
-# Uses the standard XDG data directory, falling back to a default if not set.
 function __kv_data_file
     set -l data_home "$HOME/.local/share"
     set -l data_dir (dirname "$data_home/fish/kvstore.db")
@@ -9,31 +8,132 @@ function __kv_data_file
     echo "$data_home/fish/kvstore.db"
 end
 
-# Main `kv` function to handle subcommands.
-# Usage: kv <command> [arguments...]
-function kv
-    # Check if a subcommand was provided.
-    if test (count $argv) -lt 1
-        echo "Usage: kv <command>" >&2
-        echo "Commands: set, get, delete, list" >&2
+# Show help message for specific subcommand
+function __kv_subcommand_help
+    set -l subcommand $argv[1]
+
+    switch "$subcommand"
+        case set
+            echo "Usage: kv set [OPTIONS] KEY VALUE"
+            echo
+            echo "  Set a key-value pair in the store."
+            echo
+            echo "Options:"
+            echo "  -h, --help    Show this message and exit."
+
+        case get
+            echo "Usage: kv get [OPTIONS] KEY"
+            echo
+            echo "  Get the value for a key."
+            echo
+            echo "Options:"
+            echo "  -h, --help    Show this message and exit."
+
+        case delete
+            echo "Usage: kv delete [OPTIONS] KEY"
+            echo
+            echo "  Delete a key-value pair from the store."
+            echo
+            echo "Options:"
+            echo "  -h, --help    Show this message and exit."
+
+        case list
+            echo "Usage: kv list [OPTIONS]"
+            echo
+            echo "  List all keys in the store."
+            echo
+            echo "Options:"
+            echo "  -h, --help    Show this message and exit."
+
+        case '*'
+            echo "Unknown subcommand: $subcommand" >&2
+            return 1
+    end
+    return 0
+end
+
+# Show main help message
+function __kv_help
+    echo "Usage: kv [OPTIONS] COMMAND [ARGS]..."
+    echo "A simple key-value store for Fish shell"
+    echo
+    echo "Commands:"
+    echo "  set KEY VALUE    Set a key-value pair"
+    echo "  get KEY            Get the value for a key"
+    echo "  delete KEY         Delete a key-value pair"
+    echo "  list                 List all key-value pairs"
+    echo
+    echo "Options:"
+    echo "  -h, --help           Show this help message"
+    echo "  -v, --version        Show version information"
+    echo
+    echo "Run 'kv COMMAND --help' for more information on a command."
+    return 0
+end
+
+# Show version information
+function __kv_version
+    echo "kv (Fish Key-Value Store) 1.0.0"
+    return 0
+end
+
+# Main `kv` function to handle subcommands and options
+# Usage: kv [OPTIONS] COMMAND [ARGS]...
+function kv -d "A simple key-value store for Fish shell"
+    # Define options
+    set -l options h/help v/version
+
+    # Handle help and version flags first
+    if contains -- --help $argv || contains -- -h $argv
+        __kv_help
+        return 0
+    end
+
+    if contains -- --version $argv || contains -- -v $argv
+        __kv_version
+        return 0
+    end
+
+    # Extract subcommand and its arguments
+    set -l subcommand
+    set -l subcommand_args
+
+    # First, check if we have any arguments
+    if not set -q argv[1]
+        __kv_help >&2
         return 1
     end
 
-    set -l subcommand "$argv[1]"
+    # The first argument is the subcommand
+    set subcommand "$argv[1]"
+    set subcommand_args $argv[2..-1]
+
+    # Check for help flag in subcommand arguments
+    if contains -- --help $subcommand_args || contains -- -h $subcommand_args
+        __kv_subcommand_help "$subcommand"
+        return 0
+    end
+
+    # Check if a subcommand was provided
+    if not set -q subcommand[1]
+        __kv_help >&2
+        return 1
+    end
+
     set -l data_file (__kv_data_file)
     set -l temp_file "$data_file.tmp"
 
     switch "$subcommand"
         case set
-            if test (count $argv) -ne 3
-                echo "Usage: kv set <key> <value>" >&2
+            if test (count $subcommand_args) -ne 2
+                echo "Usage: kv set [OPTIONS] KEY VALUE"
                 return 1
             end
-            set -l key "$argv[2]"
-            set -l value "$argv[3]"
+            set -l key "$subcommand_args[1]"
+            set -l value "$subcommand_args[2]"
 
             # Escape the key to ensure it can be safely used in regex.
-            set -l escaped_key (printf '%s' "$key" | sed 's/[][\/.^$*+?(){}|]/\\&/g')
+            set -l escaped_key (printf '%s' "$key" | sed 's/[][\/\.^$*+?(){}|]/\\&/g')
 
             # Use a temporary file to avoid data corruption if an error occurs.
             if test -f "$data_file"
@@ -48,11 +148,11 @@ function kv
             echo "Set key '$key'."
 
         case get
-            if test (count $argv) -ne 2
-                echo "Usage: kv get <key>" >&2
+            if test (count $subcommand_args) -ne 1
+                echo "Usage: kv get [OPTIONS] KEY"
                 return 1
             end
-            set -l key "$argv[2]"
+            set -l key "$subcommand_args[1]"
 
             if not test -f "$data_file"
                 echo ""
@@ -65,11 +165,11 @@ function kv
             echo "$value"
 
         case delete
-            if test (count $argv) -ne 2
-                echo "Usage: kv delete <key>" >&2
+            if test (count $subcommand_args) -ne 1
+                echo "Usage: kv delete [OPTIONS] KEY" >&2
                 return 1
             end
-            set -l key "$argv[2]"
+            set -l key "$subcommand_args[1]"
 
             if not test -f "$data_file"
                 echo "Key '$key' not found."
@@ -91,7 +191,6 @@ function kv
             end
 
         case list
-            set -l data_file (__kv_data_file)
             if not test -f "$data_file"
                 echo "No keys in store."
                 return 0
@@ -101,8 +200,10 @@ function kv
             cat "$data_file" | cut -d= -f1
 
         case "*"
-            echo "Unknown subcommand: '$subcommand'" >&2
-            echo "Commands: set, get, delete, list" >&2
+            echo "Usage: kv [OPTIONS] COMMAND [ARGS]..."
+            echo "Try 'kv --help' for help."
+            echo ""
+            echo "Error: No such command '$subcommand'"
             return 1
     end
 end
