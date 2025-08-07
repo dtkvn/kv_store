@@ -144,12 +144,7 @@ function kv
             __kv_execute_sql "SELECT value FROM kv WHERE key = '$key';"
 
         case list
-            __kv_execute_sql "SELECT key, value FROM kv ORDER BY key;" | while read -l line
-                set -l parts (string split '|' -- $line)
-                if test (count $parts) -eq 2
-                    echo "$parts[1]=$parts[2]"
-                end
-            end
+            __kv_execute_sql "SELECT key || '=' || value FROM kv ORDER BY key;"
 
         case delete
             if test (count $argv) -ne 1
