@@ -12,6 +12,10 @@ end
 function __kv_init_db
     set -l db (__kv_db_file)
     if not test -f "$db"
+        command -v sqlite3 >/dev/null 2>&1; or begin
+            echo "Error: sqlite3 command not found. Please install it." >&2
+            return 1
+        end
         sqlite3 "$db" "CREATE TABLE IF NOT EXISTS kv (key TEXT PRIMARY KEY, value TEXT);"
     end
 end
