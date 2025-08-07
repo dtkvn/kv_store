@@ -7,12 +7,12 @@ complete -c kv -n __fish_use_subcommand -a set -d "Set a key-value pair"
 # Subcommand: get
 complete -c kv -n __fish_use_subcommand -a get -d "Get the value of a key"
 # For the `get` subcommand, suggest existing keys from the kvstore.db file.
-complete -c kv -n "__fish_seen_subcommand_from get" -a "(cut -d= -f1 ~/.local/share/fish/kvstore.db 2>/dev/null)"
+complete -c kv -n "__fish_seen_subcommand_from get" -a "(kv list | cut -d= -f1 2>/dev/null)"
 
 # Subcommand: delete
 complete -c kv -n __fish_use_subcommand -a delete -d "Delete a key-value pair"
 # For the `delete` subcommand, suggest existing keys.
-complete -c kv -n "__fish_seen_subcommand_from delete" -a "(cut -d= -f1 ~/.local/share/fish/kvstore.db 2>/dev/null)"
+complete -c kv -n "__fish_seen_subcommand_from delete" -a "(kv list | cut -d= -f1 2>/dev/null)"
 
 # Subcommand: list
 complete -c kv -n __fish_use_subcommand -a list -d "List all keys in the store"
